@@ -244,11 +244,54 @@ if menu == "Dashboard":
     col2.metric("Vinhos degustados", len(vinhos))
     col3.metric("Avaliações", len(avaliacoes))
 
-    st.subheader("Últimos encontros")
+    st.subheader("Encontros")
     if encontros.empty:
         st.info("Nenhum encontro cadastrado ainda.")
     else:
-        st.dataframe(encontros[["data", "titulo", "anfitrioes", "local"]], width="stretch")
+        if "dashboard_encontro_id" not in st.session_state:
+            st.session_state.dashboard_encontro_id = None
+
+        for _, row in encontros.iterrows():
+            with st.container(border=True):
+                col_info, col_btn = st.columns([4, 1])
+                with col_info:
+                    st.markdown(f"### {row['titulo']}")
+                    st.write(f"**Data:** {row['data']}")
+                    st.write(f"**Anfitriões:** {row['anfitrioes'] if row['anfitrioes'] else '-'}")
+                    st.write(f"**Local:** {row['local'] if row['local'] else '-'}")
+                with col_btn:
+                    if st.button("Ver vinhos", key=f"ver_vinhos_{row['id']}"):
+                        st.session_state.dashboard_encontro_id = int(row["id"])
+
+        if st.session_state.dashboard_encontro_id:
+            encontro_sel = encontros[encontros["id"] == st.session_state.dashboard_encontro_id].iloc[0]
+            st.divider()
+            st.subheader(f"Vinhos do encontro: {encontro_sel['titulo']}")
+
+            vinhos_do_dia = query_df(
+                """
+                SELECT
+                    v.nome,
+                    v.uva,
+                    v.pais,
+                    v.regiao,
+                    v.safra,
+                    v.tipo,
+                    ROUND(AVG(a.nota), 2) AS nota_media,
+                    COUNT(a.id) AS qtd_avaliacoes
+                FROM vinhos v
+                LEFT JOIN avaliacoes a ON a.vinho_id = v.id
+                WHERE v.encontro_id = ?
+                GROUP BY v.id
+                ORDER BY v.nome
+                """,
+                (st.session_state.dashboard_encontro_id,),
+            )
+
+            if vinhos_do_dia.empty:
+                st.info("Ainda não há vinhos cadastrados para este encontro.")
+            else:
+                st.dataframe(vinhos_do_dia, width="stretch")
 
 # -----------------------------
 # Novo encontro
@@ -386,6 +429,8 @@ elif menu == "Catálogo":
     df = query_df(
         """
         SELECT
+            v.id,
+            v.encontro_id,
             e.data,
             e.titulo AS encontro,
             v.nome,
@@ -416,12 +461,20 @@ elif menu == "Catálogo":
     if df.empty:
         st.info("Nenhum vinho cadastrado ainda.")
     else:
-        busca = st.text_input("Buscar vinho, uva, país ou região")
-        if busca:
-            mask = df.apply(lambda row: row.astype(str).str.contains(busca, case=False).any(), axis=1)
-            df = df[mask]
+        encontros_filtro = ["Todos"] + sorted(df["encontro"].dropna().unique().tolist())
+        filtro_encontro = st.selectbox("Filtrar por encontro", encontros_filtro)
 
-        for _, row in df.iterrows():
+        busca = st.text_input("Buscar vinho, uva, país ou região")
+
+        df_filtrado = df.copy()
+        if filtro_encontro != "Todos":
+            df_filtrado = df_filtrado[df_filtrado["encontro"] == filtro_encontro]
+
+        if busca:
+            mask = df_filtrado.apply(lambda row: row.astype(str).str.contains(busca, case=False).any(), axis=1)
+            df_filtrado = df_filtrado[mask]
+
+        for _, row in df_filtrado.iterrows():
             with st.container(border=True):
                 col_img, col_info = st.columns([1, 3])
                 with col_img:
@@ -436,11 +489,59 @@ elif menu == "Catálogo":
                     st.write(f"**Safra:** {row['safra']} | **Produtor:** {row['produtor']}")
                     st.write(f"**Tipo:** {row['tipo']} | **Classificação:** {row['classificacao']}")
                     st.write(f"**Teor alcoólico:** {row['teor_alcoolico']} | **Temperatura:** {row['temperatura_servico']}")
+                    st.write(f"**Harmonização:** {row['harmonizacao']}")
                     st.write(f"**Visual:** {row['visual']}")
                     st.write(f"**Aroma:** {row['aroma']}")
                     st.write(f"**Paladar:** {row['paladar']}")
-                    st.write(f"**Harmonização:** {row['harmonizacao']}")
                     st.write(f"**Nota média:** {row['nota_media'] if pd.notna(row['nota_media']) else 'Sem avaliação'}")
+
+                    with st.expander("Editar ficha técnica e características"):
+                        with st.form(f"editar_vinho_{row['id']}"):
+                            nome_edit = st.text_input("Nome do vinho", value=row["nome"] or "")
+                            uva_edit = st.text_input("Uva", value=row["uva"] or "")
+                            pais_edit = st.text_input("País", value=row["pais"] or "")
+                            regiao_edit = st.text_input("Região", value=row["regiao"] or "")
+                            safra_edit = st.text_input("Safra", value=row["safra"] or "")
+                            produtor_edit = st.text_input("Produtor", value=row["produtor"] or "")
+                            tipo_edit = st.text_input("Tipo", value=row["tipo"] or "")
+                            classificacao_edit = st.text_input("Classificação", value=row["classificacao"] or "")
+                            teor_edit = st.text_input("Teor alcoólico", value=row["teor_alcoolico"] or "")
+                            temperatura_edit = st.text_input("Temperatura de serviço", value=row["temperatura_servico"] or "")
+                            harmonizacao_edit = st.text_area("Harmonização", value=row["harmonizacao"] or "")
+                            visual_edit = st.text_area("Visual", value=row["visual"] or "")
+                            aroma_edit = st.text_area("Aroma", value=row["aroma"] or "")
+                            paladar_edit = st.text_area("Paladar", value=row["paladar"] or "")
+
+                            salvar_edit = st.form_submit_button("Salvar alterações")
+
+                        if salvar_edit:
+                            execute(
+                                """
+                                UPDATE vinhos
+                                SET nome = ?, uva = ?, pais = ?, regiao = ?, safra = ?, produtor = ?,
+                                    tipo = ?, classificacao = ?, teor_alcoolico = ?, temperatura_servico = ?,
+                                    harmonizacao = ?, visual = ?, aroma = ?, paladar = ?
+                                WHERE id = ?
+                                """,
+                                (
+                                    nome_edit,
+                                    uva_edit,
+                                    pais_edit,
+                                    regiao_edit,
+                                    safra_edit,
+                                    produtor_edit,
+                                    tipo_edit,
+                                    classificacao_edit,
+                                    teor_edit,
+                                    temperatura_edit,
+                                    harmonizacao_edit,
+                                    visual_edit,
+                                    aroma_edit,
+                                    paladar_edit,
+                                    int(row["id"]),
+                                ),
+                            )
+                            st.success("Vinho atualizado com sucesso. Atualize a página para visualizar os dados revisados.")
 
 # -----------------------------
 # Rankings
@@ -480,3 +581,4 @@ elif menu == "Rankings":
         st.markdown("### Média por país")
         por_pais = ranking.groupby("pais", dropna=False)["nota_media"].mean().reset_index().sort_values("nota_media", ascending=False)
         st.bar_chart(por_pais, x="pais", y="nota_media")
+
