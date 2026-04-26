@@ -281,7 +281,7 @@ st.markdown(
 # Dashboard
 # -----------------------------
 if menu == "Dashboard":
-    encontros = query_df("SELECT * FROM encontros ORDER BY data DESC")
+    encontros = query_df("SELECT * FROM encontros ORDER BY id DESC")
     vinhos = query_df("SELECT * FROM vinhos")
     avaliacoes = query_df("SELECT * FROM avaliacoes")
 
@@ -344,6 +344,7 @@ if menu == "Dashboard":
                         )
                         st.success("Encontro atualizado com sucesso.")
                         st.session_state["editar_encontro_id"] = None
+                        st.rerun()
 
         if st.session_state.dashboard_encontro_id:
             encontro_sel = encontros[encontros["id"] == st.session_state.dashboard_encontro_id].iloc[0]
