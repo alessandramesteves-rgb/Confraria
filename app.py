@@ -338,10 +338,11 @@ if menu == "Dashboard":
                 st.dataframe(vinhos_do_dia, width="stretch")
 
 # -----------------------------
-# Novo encontro
+# Novo encontro / Edição
 # -----------------------------
 elif menu == "Novo encontro":
     st.subheader("Novo encontro")
+
     with st.form("form_encontro"):
         data_encontro = st.date_input("Data", value=date.today())
         titulo = st.text_input("Título do encontro", placeholder="Ex.: Noite Italiana")
@@ -359,6 +360,46 @@ elif menu == "Novo encontro":
                 (str(data_encontro), titulo, anfitrioes, local, observacoes),
             )
             st.success("Encontro salvo com sucesso.")
+
+    # -----------------------------
+    # Edição de encontros
+    # -----------------------------
+    st.markdown("---")
+    st.subheader("Editar encontros")
+
+    encontros = query_df("SELECT * FROM encontros ORDER BY data DESC")
+
+    if encontros.empty:
+        st.info("Nenhum encontro cadastrado.")
+    else:
+        for _, row in encontros.iterrows():
+            with st.expander(f"Editar: {row['titulo']} ({row['data']})"):
+                with st.form(f"editar_encontro_{row['id']}"):
+                    titulo_edit = st.text_input("Título", value=row["titulo"])
+                    data_edit = st.text_input("Data", value=row["data"])
+                    anfitrioes_edit = st.text_input("Anfitriões", value=row["anfitrioes"] or "")
+                    local_edit = st.text_input("Local", value=row["local"] or "")
+                    obs_edit = st.text_area("Observações", value=row["observacoes"] or "")
+
+                    salvar = st.form_submit_button("Salvar alterações")
+
+                if salvar:
+                    execute(
+                        """
+                        UPDATE encontros
+                        SET titulo = ?, data = ?, anfitrioes = ?, local = ?, observacoes = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            titulo_edit,
+                            data_edit,
+                            anfitrioes_edit,
+                            local_edit,
+                            obs_edit,
+                            int(row["id"]),
+                        ),
+                    )
+                    st.success("Encontro atualizado com sucesso.")
 
 # -----------------------------
 # Cadastrar vinho
