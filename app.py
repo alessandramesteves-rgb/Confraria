@@ -413,6 +413,7 @@ if menu == "Dashboard":
                 """
                 SELECT
                     v.id,
+                    v.encontro_id,
                     v.nome,
                     v.uva,
                     v.pais,
@@ -425,6 +426,11 @@ if menu == "Dashboard":
                 """,
                 (st.session_state.dashboard_encontro_id,),
             )
+
+            todos_encontros = ordenar_encontros(
+                query_df("SELECT id, data, titulo FROM encontros")
+            )
+            todos_encontros["label"] = todos_encontros["data"] + " - " + todos_encontros["titulo"]
 
             if vinhos_do_dia.empty:
                 st.info("Ainda não há vinhos cadastrados para este encontro.")
@@ -439,16 +445,35 @@ if menu == "Dashboard":
                             safra_edit = st.text_input("Safra", value=vinho["safra"] or "")
                             tipo_edit = st.text_input("Tipo", value=vinho["tipo"] or "")
 
-                            salvar = st.form_submit_button("Salvar alterações")
+                            st.markdown("### Mover para outro encontro")
+                            encontro_atual_label = todos_encontros.loc[
+                                todos_encontros["id"] == vinho["encontro_id"], "label"
+                            ].iloc[0]
+                            novo_encontro_label = st.selectbox(
+                                "Novo encontro",
+                                todos_encontros["label"],
+                                index=todos_encontros["label"].tolist().index(encontro_atual_label),
+                                key=f"mover_vinho_{vinho['id']}",
+                            )
+                            novo_encontro_id = int(
+                                todos_encontros.loc[
+                                    todos_encontros["label"] == novo_encontro_label, "id"
+                                ].iloc[0]
+                            )
+
+                            col_salvar, col_excluir = st.columns(2)
+                            salvar = col_salvar.form_submit_button("Salvar alterações")
+                            excluir = col_excluir.form_submit_button("🗑️ Excluir vinho")
 
                         if salvar:
                             execute(
                                 """
                                 UPDATE vinhos
-                                SET nome = ?, uva = ?, pais = ?, regiao = ?, safra = ?, tipo = ?
+                                SET encontro_id = ?, nome = ?, uva = ?, pais = ?, regiao = ?, safra = ?, tipo = ?
                                 WHERE id = ?
                                 """,
                                 (
+                                    novo_encontro_id,
                                     nome_edit,
                                     uva_edit,
                                     pais_edit,
@@ -459,6 +484,12 @@ if menu == "Dashboard":
                                 ),
                             )
                             st.success("Vinho atualizado com sucesso.")
+                            st.rerun()
+
+                        if excluir:
+                            execute("DELETE FROM avaliacoes WHERE vinho_id = ?", (int(vinho["id"]),))
+                            execute("DELETE FROM vinhos WHERE id = ?", (int(vinho["id"]),))
+                            st.success("Vinho excluído com sucesso.")
                             st.rerun()
 
 # -----------------------------
