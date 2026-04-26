@@ -1,3 +1,4 @@
+import re
 import sqlite3
 from datetime import date
 from pathlib import Path
@@ -37,7 +38,30 @@ def query_df(sql, params=()):
     return df
 
 
-def init_db():
+def 
+
+
+def roman_to_int(roman):
+    valores = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+    total = 0
+    anterior = 0
+
+    for letra in reversed(str(roman).upper()):
+        valor = valores.get(letra, 0)
+        if valor < anterior:
+            total -= valor
+        else:
+            total += valor
+            anterior = valor
+
+    return total
+
+
+def ordem_encontro(titulo):
+    match = re.match(r"^\\s*([IVXLCDM]+)\\s+Encontro", str(titulo), re.IGNORECASE)
+    if match:
+        return roman_to_int(match.group(1))
+    return 0:
     conn = get_conn()
     cur = conn.cursor()
 
@@ -280,10 +304,14 @@ st.markdown(
 # -----------------------------
 # Dashboard
 # -----------------------------
-if menu == "Dashboard":
-    encontros = query_df("SELECT * FROM encontros ORDER BY id DESC")
-    encontro_atual_id = int(encontros["id"].max()) if not encontros.empty else None
-    vinhos = query_df("SELECT * FROM vinhos")
+if menu =if menu == "Dashboard":
+    encontros = query_df("SELECT * FROM encontros")
+    if not encontros.empty:
+        encontros["ordem"] = encontros["titulo"].apply(ordem_encontro)
+        encontros = encontros.sort_values(["ordem", "id"], ascending=[False, False])
+        encontro_atual_ordem = int(encontros["ordem"].max())
+    else:
+        encontro_atual_ordem = Noneos = query_df("SELECT * FROM vinhos")
     avaliacoes = query_df("SELECT * FROM avaliacoes")
 
     col1, col2, col3 = st.columns(3)
@@ -302,8 +330,7 @@ if menu == "Dashboard":
             with st.container(border=True):
                 col_info, col_btns = st.columns([4, 2])
                 with col_info:
-                    badge_atual = " <span style='background:#b9873d;color:white;padding:4px 10px;border-radius:999px;font-size:0.8rem;'>Atual</span>" if int(row["id"]) == encontro_atual_id else ""
-                    st.markdown(f"### {row['titulo']}{badge_atual}", unsafe_allow_html=True)
+                    badge_atubadge_atual = " <span style='background:#b9873d;color:white;padding:4px 10px;border-radius:999px;font-size:0.8rem;'>Atual</span>" if int(row.get("ordem", 0)) == encontro_atual_ordem else ""            st.markdown(f"### {row['titulo']}{badge_atual}", unsafe_allow_html=True)
                     st.write(f"**Data:** {row['data']}")
                     st.write(f"**Anfitriões:** {row['anfitrioes'] if row['anfitrioes'] else '-'}")
                     st.write(f"**Local:** {row['local'] if row['local'] else '-'}")
