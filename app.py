@@ -299,15 +299,51 @@ if menu == "Dashboard":
 
         for _, row in encontros.iterrows():
             with st.container(border=True):
-                col_info, col_btn = st.columns([4, 1])
+                col_info, col_btns = st.columns([4, 2])
                 with col_info:
                     st.markdown(f"### {row['titulo']}")
                     st.write(f"**Data:** {row['data']}")
                     st.write(f"**Anfitriões:** {row['anfitrioes'] if row['anfitrioes'] else '-'}")
                     st.write(f"**Local:** {row['local'] if row['local'] else '-'}")
-                with col_btn:
-                    if st.button("Ver vinhos", key=f"ver_vinhos_{row['id']}"):
-                        st.session_state.dashboard_encontro_id = int(row["id"])
+                with col_btns:
+                    col_v, col_e = st.columns(2)
+                    with col_v:
+                        if st.button("Ver vinhos", key=f"ver_vinhos_{row['id']}"):
+                            st.session_state.dashboard_encontro_id = int(row["id"])
+                    with col_e:
+                        if st.button("Editar", key=f"editar_encontro_{row['id']}"):
+                            st.session_state[f"editar_encontro_id"] = int(row["id"])
+
+            # Form de edição inline do encontro
+            if st.session_state.get("editar_encontro_id") == int(row["id"]):
+                with st.container(border=True):
+                    st.markdown("#### ✏️ Editar encontro")
+                    with st.form(f"form_editar_encontro_{row['id']}"):
+                        titulo_edit = st.text_input("Título", value=row["titulo"]) 
+                        data_edit = st.text_input("Data", value=row["data"]) 
+                        anfitrioes_edit = st.text_input("Anfitriões", value=row["anfitrioes"] or "")
+                        local_edit = st.text_input("Local", value=row["local"] or "")
+                        obs_edit = st.text_area("Observações", value=row.get("observacoes") or "")
+                        salvar = st.form_submit_button("Salvar alterações")
+
+                    if salvar:
+                        execute(
+                            """
+                            UPDATE encontros
+                            SET titulo = ?, data = ?, anfitrioes = ?, local = ?, observacoes = ?
+                            WHERE id = ?
+                            """,
+                            (
+                                titulo_edit,
+                                data_edit,
+                                anfitrioes_edit,
+                                local_edit,
+                                obs_edit,
+                                int(row["id"]),
+                            ),
+                        )
+                        st.success("Encontro atualizado com sucesso.")
+                        st.session_state["editar_encontro_id"] = None
 
         if st.session_state.dashboard_encontro_id:
             encontro_sel = encontros[encontros["id"] == st.session_state.dashboard_encontro_id].iloc[0]
