@@ -257,6 +257,16 @@ if usuario_admin:
 
 menu = st.sidebar.radio("Menu", opcoes_menu)
 
+# Ao entrar no Dashboard, mostra apenas a lista de encontros.
+# A lista de vinhos só aparece depois de clicar em "Ver vinhos".
+if "ultimo_menu" not in st.session_state:
+    st.session_state.ultimo_menu = None
+
+if menu == "Dashboard" and st.session_state.ultimo_menu != "Dashboard":
+    st.session_state.dashboard_encontro_id = None
+
+st.session_state.ultimo_menu = menu
+
 st.markdown(
     """
     <div class="hero-card">
