@@ -94,34 +94,6 @@ def init_db():
         """
     )
 
-    # Compatibilidade com versões anteriores do banco
-    novas_colunas_vinhos = {
-        "tipo": "TEXT",
-        "classificacao": "TEXT",
-        "teor_alcoolico": "TEXT",
-        "temperatura_servico": "TEXT",
-        "harmonizacao": "TEXT",
-        "visual": "TEXT",
-        "aroma": "TEXT",
-        "paladar": "TEXT",
-        "foto_rotulo": "TEXT",
-    }
-    cur.execute("PRAGMA table_info(vinhos)")
-    colunas_vinhos = [col[1] for col in cur.fetchall()]
-    for coluna, tipo_coluna in novas_colunas_vinhos.items():
-        if coluna not in colunas_vinhos:
-            cur.execute(f"ALTER TABLE vinhos ADD COLUMN {coluna} {tipo_coluna}")
-
-    novas_colunas_avaliacoes = {
-        "repetiria": "TEXT",
-        "foi_balacobaco": "TEXT",
-    }
-    cur.execute("PRAGMA table_info(avaliacoes)")
-    colunas_avaliacoes = [col[1] for col in cur.fetchall()]
-    for coluna, tipo_coluna in novas_colunas_avaliacoes.items():
-        if coluna not in colunas_avaliacoes:
-            cur.execute(f"ALTER TABLE avaliacoes ADD COLUMN {coluna} {tipo_coluna}")
-
     conn.commit()
     conn.close()
 
@@ -129,7 +101,7 @@ def init_db():
 init_db()
 
 # -----------------------------
-# Visual Confraria
+# Visual
 # -----------------------------
 st.markdown(
     """
@@ -153,7 +125,6 @@ st.markdown(
 
     h1, h2, h3 {
         color: #5b0f2e;
-        letter-spacing: -0.02em;
     }
 
     .hero-card {
@@ -185,7 +156,8 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(91,15,46,0.08);
     }
 
-    div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {
+    div[data-testid="stForm"],
+    div[data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(255,255,255,0.76);
         border-radius: 24px;
         border: 1px solid rgba(91,15,46,0.10);
@@ -227,19 +199,23 @@ if not st.session_state.usuario:
         """,
         unsafe_allow_html=True,
     )
+
     nome = st.text_input("Seu nome")
+
     if st.button("Entrar"):
         if nome.strip():
             st.session_state.usuario = nome.strip()
             st.rerun()
         else:
             st.warning("Informe seu nome.")
+
     st.stop()
 
 ADMIN_NOMES = ["Alê", "Ale", "Alessandra"]
 usuario_admin = st.session_state.usuario in ADMIN_NOMES
 
 st.sidebar.write(f"👤 {st.session_state.usuario}")
+
 if st.sidebar.button("Sair"):
     st.session_state.usuario = None
     st.rerun()
@@ -252,12 +228,13 @@ opcoes_menu = [
     "Catálogo",
     "Rankings",
 ]
+
 if usuario_admin:
     opcoes_menu.append("Backup & Dados")
 
 menu = st.sidebar.radio("Menu", opcoes_menu)
 
-# Ao entrar no Dashboard, mostra apenas a lista de encontros.
+# Ao entrar no Dashboard, mostra apenas a lista dos encontros.
 # A lista de vinhos só aparece depois de clicar em "Ver vinhos".
 if "ultimo_menu" not in st.session_state:
     st.session_state.ultimo_menu = None
@@ -291,39 +268,48 @@ if menu == "Dashboard":
     col3.metric("Avaliações", len(avaliacoes))
 
     st.subheader("Encontros")
+
     if encontros.empty:
         st.info("Nenhum encontro cadastrado ainda.")
     else:
         if "dashboard_encontro_id" not in st.session_state:
             st.session_state.dashboard_encontro_id = None
 
+        if "editar_encontro_id" not in st.session_state:
+            st.session_state.editar_encontro_id = None
+
         for _, row in encontros.iterrows():
             with st.container(border=True):
                 col_info, col_btns = st.columns([4, 2])
+
                 with col_info:
                     st.markdown(f"### {row['titulo']}")
                     st.write(f"**Data:** {row['data']}")
                     st.write(f"**Anfitriões:** {row['anfitrioes'] if row['anfitrioes'] else '-'}")
                     st.write(f"**Local:** {row['local'] if row['local'] else '-'}")
+
                 with col_btns:
                     col_v, col_e = st.columns(2)
+
                     with col_v:
                         if st.button("Ver vinhos", key=f"ver_vinhos_{row['id']}"):
                             st.session_state.dashboard_encontro_id = int(row["id"])
+
                     with col_e:
                         if st.button("Editar", key=f"editar_encontro_{row['id']}"):
-                            st.session_state[f"editar_encontro_id"] = int(row["id"])
+                            st.session_state.editar_encontro_id = int(row["id"])
 
-            # Form de edição inline do encontro
-            if st.session_state.get("editar_encontro_id") == int(row["id"]):
+            if st.session_state.editar_encontro_id == int(row["id"]):
                 with st.container(border=True):
                     st.markdown("#### ✏️ Editar encontro")
+
                     with st.form(f"form_editar_encontro_{row['id']}"):
-                        titulo_edit = st.text_input("Título", value=row["titulo"]) 
-                        data_edit = st.text_input("Data", value=row["data"]) 
+                        titulo_edit = st.text_input("Título", value=row["titulo"])
+                        data_edit = st.text_input("Data", value=row["data"])
                         anfitrioes_edit = st.text_input("Anfitriões", value=row["anfitrioes"] or "")
                         local_edit = st.text_input("Local", value=row["local"] or "")
-                        obs_edit = st.text_area("Observações", value=row.get("observacoes") or "")
+                        obs_edit = st.text_area("Observações", value=row["observacoes"] or "")
+
                         salvar = st.form_submit_button("Salvar alterações")
 
                     if salvar:
@@ -343,13 +329,17 @@ if menu == "Dashboard":
                             ),
                         )
                         st.success("Encontro atualizado com sucesso.")
-                        st.session_state["editar_encontro_id"] = None
+                        st.session_state.editar_encontro_id = None
                         st.rerun()
 
         if st.session_state.dashboard_encontro_id:
-            encontro_sel = encontros[encontros["id"] == st.session_state.dashboard_encontro_id].iloc[0]
+            encontro_sel = encontros[
+                encontros["id"] == st.session_state.dashboard_encontro_id
+            ].iloc[0]
+
             st.divider()
             st.subheader(f"Vinhos do encontro: {encontro_sel['titulo']}")
+
             vinhos_do_dia = query_df(
                 """
                 SELECT
@@ -420,7 +410,10 @@ elif menu == "Novo encontro":
             st.error("Informe o título do encontro.")
         else:
             execute(
-                "INSERT INTO encontros (data, titulo, anfitrioes, local, observacoes) VALUES (?, ?, ?, ?, ?)",
+                """
+                INSERT INTO encontros (data, titulo, anfitrioes, local, observacoes)
+                VALUES (?, ?, ?, ?, ?)
+                """,
                 (str(data_encontro), titulo, anfitrioes, local, observacoes),
             )
             st.success("Encontro salvo com sucesso.")
@@ -430,7 +423,8 @@ elif menu == "Novo encontro":
 # -----------------------------
 elif menu == "Cadastrar vinho":
     st.subheader("Cadastrar vinho degustado")
-    encontros = query_df("SELECT id, data, titulo FROM encontros ORDER BY data DESC")
+
+    encontros = query_df("SELECT id, data, titulo FROM encontros ORDER BY id DESC")
 
     if encontros.empty:
         st.warning("Cadastre um encontro primeiro.")
@@ -439,7 +433,9 @@ elif menu == "Cadastrar vinho":
 
         with st.form("form_vinho"):
             encontro_label = st.selectbox("Encontro", encontros["label"])
-            encontro_id = int(encontros.loc[encontros["label"] == encontro_label, "id"].iloc[0])
+            encontro_id = int(
+                encontros.loc[encontros["label"] == encontro_label, "id"].iloc[0]
+            )
 
             nome = st.text_input("Nome do vinho")
             uva = st.text_input("Uva", placeholder="Ex.: Malbec, Cabernet Sauvignon, Chardonnay")
@@ -457,6 +453,7 @@ elif menu == "Cadastrar vinho":
             visual = st.text_area("Visual", placeholder="Ex.: Rubi profundo, reflexos violáceos")
             aroma = st.text_area("Aroma", placeholder="Ex.: Frutas negras, especiarias, notas florais")
             paladar = st.text_area("Paladar", placeholder="Ex.: Encorpado, taninos macios, final persistente")
+
             foto = st.file_uploader("Foto do rótulo", type=["png", "jpg", "jpeg"])
 
             submit = st.form_submit_button("Salvar vinho")
@@ -466,6 +463,7 @@ elif menu == "Cadastrar vinho":
                 st.error("Informe o nome do vinho.")
             else:
                 foto_path = None
+
                 if foto:
                     foto_path = str(UPLOAD_DIR / foto.name)
                     with open(foto_path, "wb") as f:
@@ -474,8 +472,11 @@ elif menu == "Cadastrar vinho":
                 execute(
                     """
                     INSERT INTO vinhos
-                    (encontro_id, nome, uva, pais, regiao, safra, produtor, tipo, classificacao,
-                     teor_alcoolico, temperatura_servico, harmonizacao, visual, aroma, paladar, foto_rotulo)
+                    (
+                        encontro_id, nome, uva, pais, regiao, safra, produtor,
+                        tipo, classificacao, teor_alcoolico, temperatura_servico,
+                        harmonizacao, visual, aroma, paladar, foto_rotulo
+                    )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
@@ -504,37 +505,51 @@ elif menu == "Cadastrar vinho":
 # -----------------------------
 elif menu == "Avaliar vinho":
     st.subheader("Avaliação dos confrades")
+
     vinhos = query_df(
         """
         SELECT v.id, v.nome, e.data, e.titulo
         FROM vinhos v
         JOIN encontros e ON e.id = v.encontro_id
-        ORDER BY e.data DESC, v.nome
+        ORDER BY e.id DESC, v.nome
         """
     )
 
     if vinhos.empty:
         st.warning("Cadastre um vinho primeiro.")
     else:
-        vinhos["label"] = vinhos["data"] + " - " + vinhos["titulo"] + " | " + vinhos["nome"]
+        vinhos["label"] = (
+            vinhos["data"] + " - " + vinhos["titulo"] + " | " + vinhos["nome"]
+        )
+
         with st.form("form_avaliacao"):
             vinho_label = st.selectbox("Vinho", vinhos["label"])
             vinho_id = int(vinhos.loc[vinhos["label"] == vinho_label, "id"].iloc[0])
 
             st.write(f"Avaliando como: **{st.session_state.usuario}**")
+
             nota = st.slider("Nota", 0.0, 10.0, 8.0, 0.5)
             repetiria = st.radio("Repetiria?", ["Sim", "Talvez", "Não"], horizontal=True)
             foi_balacobaco = st.radio("Foi Balacobaco?", ["Sim", "Muito", "Épico"], horizontal=True)
             comentario = st.text_area("Comentário")
+
             submit = st.form_submit_button("Salvar avaliação")
 
         if submit:
             execute(
                 """
-                INSERT INTO avaliacoes (vinho_id, confrade, nota, repetiria, foi_balacobaco, comentario)
+                INSERT INTO avaliacoes
+                (vinho_id, confrade, nota, repetiria, foi_balacobaco, comentario)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (vinho_id, st.session_state.usuario, nota, repetiria, foi_balacobaco, comentario),
+                (
+                    vinho_id,
+                    st.session_state.usuario,
+                    nota,
+                    repetiria,
+                    foi_balacobaco,
+                    comentario,
+                ),
             )
             st.success("Avaliação salva com sucesso.")
 
@@ -543,6 +558,7 @@ elif menu == "Avaliar vinho":
 # -----------------------------
 elif menu == "Catálogo":
     st.subheader("Catálogo de vinhos")
+
     df = query_df(
         """
         SELECT
@@ -571,7 +587,7 @@ elif menu == "Catálogo":
         JOIN encontros e ON e.id = v.encontro_id
         LEFT JOIN avaliacoes a ON a.vinho_id = v.id
         GROUP BY v.id
-        ORDER BY e.data DESC, v.nome
+        ORDER BY e.id DESC, v.nome
         """
     )
 
@@ -580,23 +596,31 @@ elif menu == "Catálogo":
     else:
         encontros_filtro = ["Todos"] + sorted(df["encontro"].dropna().unique().tolist())
         filtro_encontro = st.selectbox("Filtrar por encontro", encontros_filtro)
+
         busca = st.text_input("Buscar vinho, uva, país ou região")
 
         df_filtrado = df.copy()
+
         if filtro_encontro != "Todos":
             df_filtrado = df_filtrado[df_filtrado["encontro"] == filtro_encontro]
+
         if busca:
-            mask = df_filtrado.apply(lambda row: row.astype(str).str.contains(busca, case=False).any(), axis=1)
+            mask = df_filtrado.apply(
+                lambda row: row.astype(str).str.contains(busca, case=False).any(),
+                axis=1,
+            )
             df_filtrado = df_filtrado[mask]
 
         for _, row in df_filtrado.iterrows():
             with st.container(border=True):
                 col_img, col_info = st.columns([1, 3])
+
                 with col_img:
                     if row["foto_rotulo"] and Path(row["foto_rotulo"]).exists():
                         st.image(row["foto_rotulo"], width=160)
                     else:
                         st.write("🍷")
+
                 with col_info:
                     st.markdown(f"### {row['nome']}")
                     st.write(f"**Encontro:** {row['data']} - {row['encontro']}")
@@ -608,7 +632,9 @@ elif menu == "Catálogo":
                     st.write(f"**Visual:** {row['visual']}")
                     st.write(f"**Aroma:** {row['aroma']}")
                     st.write(f"**Paladar:** {row['paladar']}")
-                    st.write(f"**Nota média:** {row['nota_media'] if pd.notna(row['nota_media']) else 'Sem avaliação'}")
+                    st.write(
+                        f"**Nota média:** {row['nota_media'] if pd.notna(row['nota_media']) else 'Sem avaliação'}"
+                    )
 
                     with st.expander("Editar ficha técnica e características"):
                         with st.form(f"editar_vinho_{row['id']}"):
@@ -626,6 +652,7 @@ elif menu == "Catálogo":
                             visual_edit = st.text_area("Visual", value=row["visual"] or "")
                             aroma_edit = st.text_area("Aroma", value=row["aroma"] or "")
                             paladar_edit = st.text_area("Paladar", value=row["paladar"] or "")
+
                             salvar_edit = st.form_submit_button("Salvar alterações")
 
                         if salvar_edit:
@@ -655,13 +682,15 @@ elif menu == "Catálogo":
                                     int(row["id"]),
                                 ),
                             )
-                            st.success("Vinho atualizado com sucesso. Atualize a página para visualizar os dados revisados.")
+                            st.success("Vinho atualizado com sucesso.")
+                            st.rerun()
 
 # -----------------------------
 # Rankings
 # -----------------------------
 elif menu == "Rankings":
     st.subheader("Rankings Balacobaco")
+
     ranking = query_df(
         """
         SELECT
@@ -688,11 +717,21 @@ elif menu == "Rankings":
         st.dataframe(ranking, width="stretch")
 
         st.markdown("### Média por uva")
-        por_uva = ranking.groupby("uva", dropna=False)["nota_media"].mean().reset_index().sort_values("nota_media", ascending=False)
+        por_uva = (
+            ranking.groupby("uva", dropna=False)["nota_media"]
+            .mean()
+            .reset_index()
+            .sort_values("nota_media", ascending=False)
+        )
         st.bar_chart(por_uva, x="uva", y="nota_media")
 
         st.markdown("### Média por país")
-        por_pais = ranking.groupby("pais", dropna=False)["nota_media"].mean().reset_index().sort_values("nota_media", ascending=False)
+        por_pais = (
+            ranking.groupby("pais", dropna=False)["nota_media"]
+            .mean()
+            .reset_index()
+            .sort_values("nota_media", ascending=False)
+        )
         st.bar_chart(por_pais, x="pais", y="nota_media")
 
 # -----------------------------
@@ -704,17 +743,37 @@ elif menu == "Backup & Dados":
         st.stop()
 
     st.subheader("💾 Backup dos dados")
+
     encontros = query_df("SELECT * FROM encontros")
     vinhos = query_df("SELECT * FROM vinhos")
     avaliacoes = query_df("SELECT * FROM avaliacoes")
 
     st.markdown("### Baixar dados individuais")
-    st.download_button("⬇️ Baixar encontros", encontros.to_csv(index=False), "encontros.csv", "text/csv")
-    st.download_button("⬇️ Baixar vinhos", vinhos.to_csv(index=False), "vinhos.csv", "text/csv")
-    st.download_button("⬇️ Baixar avaliações", avaliacoes.to_csv(index=False), "avaliacoes.csv", "text/csv")
+
+    st.download_button(
+        "⬇️ Baixar encontros",
+        encontros.to_csv(index=False),
+        "encontros.csv",
+        "text/csv",
+    )
+
+    st.download_button(
+        "⬇️ Baixar vinhos",
+        vinhos.to_csv(index=False),
+        "vinhos.csv",
+        "text/csv",
+    )
+
+    st.download_button(
+        "⬇️ Baixar avaliações",
+        avaliacoes.to_csv(index=False),
+        "avaliacoes.csv",
+        "text/csv",
+    )
 
     st.markdown("---")
     st.markdown("### Backup completo")
+
     backup = pd.concat(
         [
             encontros.assign(tipo_backup="encontros"),
@@ -724,11 +783,19 @@ elif menu == "Backup & Dados":
         ignore_index=True,
         sort=False,
     )
-    st.download_button("⬇️ Baixar backup completo", backup.to_csv(index=False), "backup_balacobaco.csv", "text/csv")
+
+    st.download_button(
+        "⬇️ Baixar backup completo",
+        backup.to_csv(index=False),
+        "backup_balacobaco.csv",
+        "text/csv",
+    )
 
     st.markdown("---")
     st.markdown("### ⚠️ Administração")
+
     confirmar = st.checkbox("Confirmar limpeza da base")
+
     if confirmar and st.button("🧹 Limpar base de dados"):
         execute("DELETE FROM avaliacoes")
         execute("DELETE FROM vinhos")
