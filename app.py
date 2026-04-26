@@ -316,29 +316,56 @@ if menu == "Dashboard":
             vinhos_do_dia = query_df(
                 """
                 SELECT
+                    v.id,
                     v.nome,
                     v.uva,
                     v.pais,
                     v.regiao,
                     v.safra,
-                    v.tipo,
-                    ROUND(AVG(a.nota), 2) AS nota_media,
-                    COUNT(a.id) AS qtd_avaliacoes
+                    v.tipo
                 FROM vinhos v
-                LEFT JOIN avaliacoes a ON a.vinho_id = v.id
                 WHERE v.encontro_id = ?
-                GROUP BY v.id
                 ORDER BY v.nome
                 """,
                 (st.session_state.dashboard_encontro_id,),
             )
+
             if vinhos_do_dia.empty:
                 st.info("Ainda não há vinhos cadastrados para este encontro.")
             else:
-                st.dataframe(vinhos_do_dia, width="stretch")
+                for _, vinho in vinhos_do_dia.iterrows():
+                    with st.expander(f"🍷 {vinho['nome']}"):
+                        with st.form(f"editar_vinho_dashboard_{vinho['id']}"):
+                            nome_edit = st.text_input("Nome", value=vinho["nome"])
+                            uva_edit = st.text_input("Uva", value=vinho["uva"] or "")
+                            pais_edit = st.text_input("País", value=vinho["pais"] or "")
+                            regiao_edit = st.text_input("Região", value=vinho["regiao"] or "")
+                            safra_edit = st.text_input("Safra", value=vinho["safra"] or "")
+                            tipo_edit = st.text_input("Tipo", value=vinho["tipo"] or "")
+
+                            salvar = st.form_submit_button("Salvar alterações")
+
+                        if salvar:
+                            execute(
+                                """
+                                UPDATE vinhos
+                                SET nome = ?, uva = ?, pais = ?, regiao = ?, safra = ?, tipo = ?
+                                WHERE id = ?
+                                """,
+                                (
+                                    nome_edit,
+                                    uva_edit,
+                                    pais_edit,
+                                    regiao_edit,
+                                    safra_edit,
+                                    tipo_edit,
+                                    int(vinho["id"]),
+                                ),
+                            )
+                            st.success("Vinho atualizado com sucesso.")
 
 # -----------------------------
-# Novo encontro / Edição
+# Novo encontro
 # -----------------------------
 elif menu == "Novo encontro":
     st.subheader("Novo encontro")
@@ -360,46 +387,6 @@ elif menu == "Novo encontro":
                 (str(data_encontro), titulo, anfitrioes, local, observacoes),
             )
             st.success("Encontro salvo com sucesso.")
-
-    # -----------------------------
-    # Edição de encontros
-    # -----------------------------
-    st.markdown("---")
-    st.subheader("Editar encontros")
-
-    encontros = query_df("SELECT * FROM encontros ORDER BY data DESC")
-
-    if encontros.empty:
-        st.info("Nenhum encontro cadastrado.")
-    else:
-        for _, row in encontros.iterrows():
-            with st.expander(f"Editar: {row['titulo']} ({row['data']})"):
-                with st.form(f"editar_encontro_{row['id']}"):
-                    titulo_edit = st.text_input("Título", value=row["titulo"])
-                    data_edit = st.text_input("Data", value=row["data"])
-                    anfitrioes_edit = st.text_input("Anfitriões", value=row["anfitrioes"] or "")
-                    local_edit = st.text_input("Local", value=row["local"] or "")
-                    obs_edit = st.text_area("Observações", value=row["observacoes"] or "")
-
-                    salvar = st.form_submit_button("Salvar alterações")
-
-                if salvar:
-                    execute(
-                        """
-                        UPDATE encontros
-                        SET titulo = ?, data = ?, anfitrioes = ?, local = ?, observacoes = ?
-                        WHERE id = ?
-                        """,
-                        (
-                            titulo_edit,
-                            data_edit,
-                            anfitrioes_edit,
-                            local_edit,
-                            obs_edit,
-                            int(row["id"]),
-                        ),
-                    )
-                    st.success("Encontro atualizado com sucesso.")
 
 # -----------------------------
 # Cadastrar vinho
