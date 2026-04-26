@@ -125,28 +125,91 @@ init_db()
 st.markdown(
     """
     <style>
-    .main {background-color: #fffaf5;}
-    h1, h2, h3 {color: #6b1233;}
-    .stButton button {
-        background-color: #6b1233;
-        color: white;
-        border-radius: 12px;
-        border: none;
-        padding: 0.6rem 1rem;
+    .stApp {
+        background: linear-gradient(135deg, #fff8ef 0%, #f7eadf 45%, #f3dfd0 100%);
     }
-    .metric-card {
+
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #5b0f2e 0%, #2f0718 100%);
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #fff7ed !important;
+    }
+
+    h1, h2, h3 {
+        color: #5b0f2e;
+        letter-spacing: -0.02em;
+    }
+
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    .hero-card {
+        background: linear-gradient(135deg, #5b0f2e 0%, #8a2048 65%, #b9873d 100%);
+        color: #fff7ed;
+        padding: 2rem;
+        border-radius: 28px;
+        box-shadow: 0 12px 35px rgba(91, 15, 46, 0.25);
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-card h1 {
+        color: #fff7ed;
+        margin-bottom: 0.3rem;
+    }
+
+    .hero-card p {
+        color: #fff1d6;
+        font-size: 1.05rem;
+        margin-bottom: 0;
+    }
+
+    div[data-testid="stMetric"] {
+        background: rgba(255,255,255,0.78);
         padding: 1rem;
-        border-radius: 18px;
-        background: #ffffff;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-radius: 20px;
+        border: 1px solid rgba(91,15,46,0.10);
+        box-shadow: 0 6px 20px rgba(91,15,46,0.08);
+    }
+
+    div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: rgba(255,255,255,0.72);
+        border-radius: 22px;
+        border: 1px solid rgba(91,15,46,0.10);
+        box-shadow: 0 8px 24px rgba(91,15,46,0.08);
+        padding: 0.8rem;
+    }
+
+    .stButton button {
+        background: linear-gradient(135deg, #6b1233 0%, #9b2752 100%);
+        color: white;
+        border-radius: 14px;
+        border: none;
+        padding: 0.65rem 1.1rem;
+        font-weight: 700;
+    }
+
+    .stButton button:hover {
+        border: none;
+        transform: translateY(-1px);
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.title("🍷 Adega Balacobaco")
-st.caption("Catálogo dos vinhos, encontros e avaliações da confraria.")
+st.markdown(
+    """
+    <div class="hero-card">
+        <h1>🍷 Adega Balacobaco</h1>
+        <p>Catálogo dos vinhos, encontros, fichas técnicas e avaliações da confraria.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 menu = st.sidebar.radio(
     "Menu",
