@@ -222,6 +222,15 @@ st.markdown(
     .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
+        max-width: 1180px;
+    }
+
+    html, body, [class*="css"] {
+        font-size: 18px;
+    }
+
+    p, li, div, label, span {
+        line-height: 1.55;
     }
 
     h1, h2, h3 {
@@ -229,10 +238,22 @@ st.markdown(
         letter-spacing: -0.02em;
     }
 
+    h1 {
+        font-size: 2.5rem !important;
+    }
+
+    h2 {
+        font-size: 2rem !important;
+    }
+
+    h3 {
+        font-size: 1.55rem !important;
+    }
+
     .hero-card {
         background: linear-gradient(135deg, #5b0f2e 0%, #8a2048 60%, #b9873d 100%);
         color: #fff7ed;
-        padding: 2rem;
+        padding: 2.2rem;
         border-radius: 30px;
         box-shadow: 0 14px 34px rgba(91, 15, 46, 0.26);
         margin-bottom: 1.5rem;
@@ -240,30 +261,38 @@ st.markdown(
 
     .hero-card h1 {
         color: #fff7ed;
-        margin-bottom: 0.25rem;
-        font-size: 2.4rem;
+        margin-bottom: 0.35rem;
+        font-size: 2.7rem !important;
     }
 
     .hero-card p {
         color: #fff1d6;
-        font-size: 1.08rem;
+        font-size: 1.2rem;
         margin-bottom: 0;
     }
 
     div[data-testid="stMetric"] {
-        background: rgba(255,255,255,0.80);
-        padding: 1rem;
+        background: rgba(255,255,255,0.84);
+        padding: 1.1rem;
         border-radius: 22px;
         border: 1px solid rgba(91,15,46,0.10);
         box-shadow: 0 8px 24px rgba(91,15,46,0.08);
     }
 
+    div[data-testid="stMetric"] label {
+        font-size: 1rem !important;
+    }
+
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+    }
+
     div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(255,255,255,0.76);
+        background: rgba(255,255,255,0.82);
         border-radius: 24px;
         border: 1px solid rgba(91,15,46,0.10);
         box-shadow: 0 8px 24px rgba(91,15,46,0.08);
-        padding: 0.8rem;
+        padding: 1rem;
     }
 
     .stButton button {
@@ -271,13 +300,76 @@ st.markdown(
         color: white;
         border-radius: 14px;
         border: none;
-        padding: 0.65rem 1.1rem;
+        padding: 0.85rem 1.25rem;
+        font-size: 1.05rem;
         font-weight: 700;
+        min-height: 48px;
     }
 
     .stButton button:hover {
         border: none;
         transform: translateY(-1px);
+    }
+
+    input, textarea, select {
+        font-size: 1.05rem !important;
+        min-height: 46px;
+    }
+
+    label, .stRadio label {
+        font-size: 1.05rem !important;
+        font-weight: 600;
+    }
+
+    [data-testid="stSidebar"] {
+        font-size: 1.05rem;
+    }
+
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] div {
+        font-size: 1.02rem !important;
+    }
+
+    [data-testid="stDataFrame"] {
+        font-size: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        html, body, [class*="css"] {
+            font-size: 19px;
+        }
+
+        .hero-card {
+            padding: 1.5rem;
+            border-radius: 24px;
+        }
+
+        .hero-card h1 {
+            font-size: 2.1rem !important;
+        }
+
+        .hero-card p {
+            font-size: 1.1rem;
+        }
+
+        h1 {
+            font-size: 2.05rem !important;
+        }
+
+        h2 {
+            font-size: 1.7rem !important;
+        }
+
+        h3 {
+            font-size: 1.35rem !important;
+        }
+
+        .stButton button {
+            width: 100%;
+            min-height: 52px;
+            font-size: 1.05rem;
+        }
     }
     </style>
     """,
@@ -392,9 +484,15 @@ if menu == "Dashboard":
                         else ""
                     )
                     st.markdown(f"### {row['titulo']}{badge_atual}", unsafe_allow_html=True)
-                    st.write(f"**Data:** {row['data']}")
+
                     if "tema" in row and pd.notna(row["tema"]) and str(row["tema"]).strip():
-                        st.write(f"**Tema:** {row['tema']}")
+                        st.markdown(
+                            f"<span style='color:#8a2048;font-size:1.18rem;font-style:italic;font-weight:500;'>"
+                            f"{row['tema']}</span>",
+                            unsafe_allow_html=True
+                        )
+
+                    st.write(f"**Data:** {row['data']}")
                     st.write(f"**Anfitriões:** {row['anfitrioes'] if row['anfitrioes'] else '-'}")
                     st.write(f"**Local:** {row['local'] if row['local'] else '-'}")
 
