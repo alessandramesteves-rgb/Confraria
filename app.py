@@ -48,6 +48,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data TEXT NOT NULL,
             titulo TEXT NOT NULL,
+            tema TEXT,
             anfitrioes TEXT,
             local TEXT,
             observacoes TEXT
@@ -96,6 +97,16 @@ def init_db():
     )
 
     # Compatibilidade com bancos já criados em versões anteriores
+    novas_colunas_encontros = {
+        "tema": "TEXT",
+    }
+
+    cur.execute("PRAGMA table_info(encontros)")
+    colunas_encontros = [col[1] for col in cur.fetchall()]
+    for coluna, tipo_coluna in novas_colunas_encontros.items():
+        if coluna not in colunas_encontros:
+            cur.execute(f"ALTER TABLE encontros ADD COLUMN {coluna} {tipo_coluna}")
+
     novas_colunas_vinhos = {
         "produtor": "TEXT",
         "tipo": "TEXT",
@@ -147,9 +158,18 @@ def roman_to_int(roman):
 
 
 def ordem_encontro(titulo):
-    match = re.match(r"^\s*([IVXLCDM]+)\s+Encontro", str(titulo), re.IGNORECASE)
-    if match:
-        return roman_to_int(match.group(1))
+    titulo = str(titulo)
+
+    # Novo padrão: 1°, 2°, 10°...
+    match_num = re.match(r"^\s*(\d+)[°º]?\s+Encontro", titulo, re.IGNORECASE)
+    if match_num:
+        return int(match_num.group(1))
+
+    # Compatibilidade com romano
+    match_romano = re.match(r"^\s*([IVXLCDM]+)\s+Encontro", titulo, re.IGNORECASE)
+    if match_romano:
+        return roman_to_int(match_romano.group(1))
+
     return 0
 
 
@@ -160,6 +180,23 @@ def ordenar_encontros(df):
     df = df.copy()
     df["ordem"] = df["titulo"].apply(ordem_encontro)
     return df.sort_values(["ordem", "id"], ascending=[False, False])
+
+
+def proximo_numero_encontro():
+    encontros = query_df("SELECT titulo FROM encontros")
+    if encontros.empty:
+        return 1
+
+    maior = encontros["titulo"].apply(ordem_encontro).max()
+    if pd.isna(maior) or int(maior) == 0:
+        return 1
+
+    return int(maior) + 1
+
+
+def titulo_sugerido_encontro():
+    numero = proximo_numero_encontro()
+    return f"{numero}° Encontro Balacobaco"
 
 
 init_db()
@@ -356,6 +393,8 @@ if menu == "Dashboard":
                     )
                     st.markdown(f"### {row['titulo']}{badge_atual}", unsafe_allow_html=True)
                     st.write(f"**Data:** {row['data']}")
+                    if "tema" in row and pd.notna(row["tema"]) and str(row["tema"]).strip():
+                        st.write(f"**Tema:** {row['tema']}")
                     st.write(f"**Anfitriões:** {row['anfitrioes'] if row['anfitrioes'] else '-'}")
                     st.write(f"**Local:** {row['local'] if row['local'] else '-'}")
 
@@ -376,6 +415,7 @@ if menu == "Dashboard":
 
                     with st.form(f"form_editar_encontro_{row['id']}"):
                         titulo_edit = st.text_input("Título", value=row["titulo"])
+                        tema_edit = st.text_input("Tema", value=row["tema"] if "tema" in row and pd.notna(row["tema"]) else "")
                         data_edit = st.text_input("Data", value=row["data"])
                         anfitrioes_edit = st.text_input("Anfitriões", value=row["anfitrioes"] or "")
                         local_edit = st.text_input("Local", value=row["local"] or "")
@@ -387,11 +427,12 @@ if menu == "Dashboard":
                         execute(
                             """
                             UPDATE encontros
-                            SET titulo = ?, data = ?, anfitrioes = ?, local = ?, observacoes = ?
+                            SET titulo = ?, tema = ?, data = ?, anfitrioes = ?, local = ?, observacoes = ?
                             WHERE id = ?
                             """,
                             (
                                 titulo_edit,
+                                tema_edit,
                                 data_edit,
                                 anfitrioes_edit,
                                 local_edit,
@@ -498,9 +539,12 @@ if menu == "Dashboard":
 elif menu == "Novo encontro":
     st.subheader("Novo encontro")
 
+    titulo_sugerido = titulo_sugerido_encontro()
+
     with st.form("form_encontro"):
         data_encontro = st.date_input("Data", value=date.today())
-        titulo = st.text_input("Título do encontro", placeholder="Ex.: VIII Encontro Balacobaco")
+        titulo = st.text_input("Título do encontro", value=titulo_sugerido)
+        tema = st.text_input("Tema", placeholder="Ex.: Noite Italiana, Vinhos Portugueses, Harmonização com Massas")
         anfitrioes = st.text_input("Anfitriões", placeholder="Ex.: Alê & Ale")
         local = st.text_input("Local")
         observacoes = st.text_area("Observações")
@@ -512,10 +556,10 @@ elif menu == "Novo encontro":
         else:
             execute(
                 """
-                INSERT INTO encontros (data, titulo, anfitrioes, local, observacoes)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO encontros (data, titulo, tema, anfitrioes, local, observacoes)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (str(data_encontro), titulo, anfitrioes, local, observacoes),
+                (str(data_encontro), titulo, tema, anfitrioes, local, observacoes),
             )
             st.success("Encontro salvo com sucesso.")
 
@@ -667,6 +711,7 @@ elif menu == "Catálogo":
             v.encontro_id,
             e.data,
             e.titulo AS encontro,
+            e.tema AS tema_encontro,
             v.nome,
             v.uva,
             v.pais,
@@ -732,6 +777,8 @@ elif menu == "Catálogo":
                 with col_info:
                     st.markdown(f"### {row['nome']}")
                     st.write(f"**Encontro:** {row['data']} - {row['encontro']}")
+                    if "tema_encontro" in row and pd.notna(row["tema_encontro"]) and str(row["tema_encontro"]).strip():
+                        st.write(f"**Tema:** {row['tema_encontro']}")
                     st.write(f"**Uva:** {row['uva']} | **País/Região:** {row['pais']} / {row['regiao']}")
                     st.write(f"**Safra:** {row['safra']} | **Produtor:** {row['produtor']}")
                     st.write(f"**Tipo:** {row['tipo']} | **Classificação:** {row['classificacao']}")
