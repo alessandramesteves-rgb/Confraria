@@ -222,15 +222,6 @@ st.markdown(
     .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
-        max-width: 1180px;
-    }
-
-    html, body, [class*="css"] {
-        font-size: 18px;
-    }
-
-    p, li, div, label, span {
-        line-height: 1.55;
     }
 
     h1, h2, h3 {
@@ -238,22 +229,10 @@ st.markdown(
         letter-spacing: -0.02em;
     }
 
-    h1 {
-        font-size: 2.5rem !important;
-    }
-
-    h2 {
-        font-size: 2rem !important;
-    }
-
-    h3 {
-        font-size: 1.55rem !important;
-    }
-
     .hero-card {
         background: linear-gradient(135deg, #5b0f2e 0%, #8a2048 60%, #b9873d 100%);
         color: #fff7ed;
-        padding: 2.2rem;
+        padding: 2rem;
         border-radius: 30px;
         box-shadow: 0 14px 34px rgba(91, 15, 46, 0.26);
         margin-bottom: 1.5rem;
@@ -261,38 +240,30 @@ st.markdown(
 
     .hero-card h1 {
         color: #fff7ed;
-        margin-bottom: 0.35rem;
-        font-size: 2.7rem !important;
+        margin-bottom: 0.25rem;
+        font-size: 2.4rem;
     }
 
     .hero-card p {
         color: #fff1d6;
-        font-size: 1.2rem;
+        font-size: 1.08rem;
         margin-bottom: 0;
     }
 
     div[data-testid="stMetric"] {
-        background: rgba(255,255,255,0.84);
-        padding: 1.1rem;
+        background: rgba(255,255,255,0.80);
+        padding: 1rem;
         border-radius: 22px;
         border: 1px solid rgba(91,15,46,0.10);
         box-shadow: 0 8px 24px rgba(91,15,46,0.08);
     }
 
-    div[data-testid="stMetric"] label {
-        font-size: 1rem !important;
-    }
-
-    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-    }
-
     div[data-testid="stForm"], div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(255,255,255,0.82);
+        background: rgba(255,255,255,0.76);
         border-radius: 24px;
         border: 1px solid rgba(91,15,46,0.10);
         box-shadow: 0 8px 24px rgba(91,15,46,0.08);
-        padding: 1rem;
+        padding: 0.8rem;
     }
 
     .stButton button {
@@ -300,76 +271,13 @@ st.markdown(
         color: white;
         border-radius: 14px;
         border: none;
-        padding: 0.85rem 1.25rem;
-        font-size: 1.05rem;
+        padding: 0.65rem 1.1rem;
         font-weight: 700;
-        min-height: 48px;
     }
 
     .stButton button:hover {
         border: none;
         transform: translateY(-1px);
-    }
-
-    input, textarea, select {
-        font-size: 1.05rem !important;
-        min-height: 46px;
-    }
-
-    label, .stRadio label {
-        font-size: 1.05rem !important;
-        font-weight: 600;
-    }
-
-    [data-testid="stSidebar"] {
-        font-size: 1.05rem;
-    }
-
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] div {
-        font-size: 1.02rem !important;
-    }
-
-    [data-testid="stDataFrame"] {
-        font-size: 1rem;
-    }
-
-    @media (max-width: 768px) {
-        html, body, [class*="css"] {
-            font-size: 19px;
-        }
-
-        .hero-card {
-            padding: 1.5rem;
-            border-radius: 24px;
-        }
-
-        .hero-card h1 {
-            font-size: 2.1rem !important;
-        }
-
-        .hero-card p {
-            font-size: 1.1rem;
-        }
-
-        h1 {
-            font-size: 2.05rem !important;
-        }
-
-        h2 {
-            font-size: 1.7rem !important;
-        }
-
-        h3 {
-            font-size: 1.35rem !important;
-        }
-
-        .stButton button {
-            width: 100%;
-            min-height: 52px;
-            font-size: 1.05rem;
-        }
     }
     </style>
     """,
@@ -473,6 +381,11 @@ if menu == "Dashboard":
         if "editar_encontro_id" not in st.session_state:
             st.session_state.editar_encontro_id = None
 
+        todos_encontros = ordenar_encontros(
+            query_df("SELECT id, data, titulo FROM encontros")
+        )
+        todos_encontros["label"] = todos_encontros["data"] + " - " + todos_encontros["titulo"]
+
         for _, row in encontros.iterrows():
             with st.container(border=True):
                 col_info, col_btns = st.columns([4, 2])
@@ -501,12 +414,19 @@ if menu == "Dashboard":
 
                     with col_v:
                         if st.button("Ver vinhos", key=f"ver_vinhos_{row['id']}"):
-                            st.session_state.dashboard_encontro_id = int(row["id"])
+                            if st.session_state.dashboard_encontro_id == int(row["id"]):
+                                st.session_state.dashboard_encontro_id = None
+                            else:
+                                st.session_state.dashboard_encontro_id = int(row["id"])
 
                     with col_e:
                         if st.button("Editar", key=f"editar_encontro_{row['id']}"):
-                            st.session_state.editar_encontro_id = int(row["id"])
+                            if st.session_state.editar_encontro_id == int(row["id"]):
+                                st.session_state.editar_encontro_id = None
+                            else:
+                                st.session_state.editar_encontro_id = int(row["id"])
 
+            # Edição do encontro logo abaixo do evento selecionado
             if st.session_state.editar_encontro_id == int(row["id"]):
                 with st.container(border=True):
                     st.markdown("#### ✏️ Editar encontro")
@@ -542,94 +462,90 @@ if menu == "Dashboard":
                         st.session_state.editar_encontro_id = None
                         st.rerun()
 
-        if st.session_state.dashboard_encontro_id:
-            encontro_sel = encontros[encontros["id"] == st.session_state.dashboard_encontro_id].iloc[0]
+            # Lista de vinhos logo abaixo do evento selecionado
+            if st.session_state.dashboard_encontro_id == int(row["id"]):
+                vinhos_do_dia = query_df(
+                    """
+                    SELECT
+                        v.id,
+                        v.encontro_id,
+                        v.nome,
+                        v.uva,
+                        v.pais,
+                        v.regiao,
+                        v.safra,
+                        v.tipo
+                    FROM vinhos v
+                    WHERE v.encontro_id = ?
+                    ORDER BY v.nome
+                    """,
+                    (int(row["id"]),),
+                )
 
-            st.divider()
-            st.subheader(f"Vinhos do encontro: {encontro_sel['titulo']}")
+                with st.container(border=True):
+                    st.markdown("#### Vinhos degustados")
 
-            vinhos_do_dia = query_df(
-                """
-                SELECT
-                    v.id,
-                    v.encontro_id,
-                    v.nome,
-                    v.uva,
-                    v.pais,
-                    v.regiao,
-                    v.safra,
-                    v.tipo
-                FROM vinhos v
-                WHERE v.encontro_id = ?
-                ORDER BY v.nome
-                """,
-                (st.session_state.dashboard_encontro_id,),
-            )
+                    if vinhos_do_dia.empty:
+                        st.info("Ainda não há vinhos cadastrados para este encontro.")
+                    else:
+                        for _, vinho in vinhos_do_dia.iterrows():
+                            with st.expander(f"🍷 {vinho['nome']}"):
+                                with st.form(f"editar_vinho_dashboard_{vinho['id']}"):
+                                    nome_edit = st.text_input("Nome", value=vinho["nome"])
+                                    uva_edit = st.text_input("Uva", value=vinho["uva"] or "")
+                                    pais_edit = st.text_input("País", value=vinho["pais"] or "")
+                                    regiao_edit = st.text_input("Região", value=vinho["regiao"] or "")
+                                    safra_edit = st.text_input("Safra", value=vinho["safra"] or "")
+                                    tipo_edit = st.text_input("Tipo", value=vinho["tipo"] or "")
 
-            todos_encontros = ordenar_encontros(
-                query_df("SELECT id, data, titulo FROM encontros")
-            )
-            todos_encontros["label"] = todos_encontros["data"] + " - " + todos_encontros["titulo"]
+                                    st.markdown("### Mover para outro encontro")
+                                    encontro_atual_label = todos_encontros.loc[
+                                        todos_encontros["id"] == vinho["encontro_id"], "label"
+                                    ].iloc[0]
 
-            if vinhos_do_dia.empty:
-                st.info("Ainda não há vinhos cadastrados para este encontro.")
-            else:
-                for _, vinho in vinhos_do_dia.iterrows():
-                    with st.expander(f"🍷 {vinho['nome']}"):
-                        with st.form(f"editar_vinho_dashboard_{vinho['id']}"):
-                            nome_edit = st.text_input("Nome", value=vinho["nome"])
-                            uva_edit = st.text_input("Uva", value=vinho["uva"] or "")
-                            pais_edit = st.text_input("País", value=vinho["pais"] or "")
-                            regiao_edit = st.text_input("Região", value=vinho["regiao"] or "")
-                            safra_edit = st.text_input("Safra", value=vinho["safra"] or "")
-                            tipo_edit = st.text_input("Tipo", value=vinho["tipo"] or "")
+                                    novo_encontro_label = st.selectbox(
+                                        "Novo encontro",
+                                        todos_encontros["label"],
+                                        index=todos_encontros["label"].tolist().index(encontro_atual_label),
+                                        key=f"mover_vinho_{vinho['id']}",
+                                    )
 
-                            st.markdown("### Mover para outro encontro")
-                            encontro_atual_label = todos_encontros.loc[
-                                todos_encontros["id"] == vinho["encontro_id"], "label"
-                            ].iloc[0]
-                            novo_encontro_label = st.selectbox(
-                                "Novo encontro",
-                                todos_encontros["label"],
-                                index=todos_encontros["label"].tolist().index(encontro_atual_label),
-                                key=f"mover_vinho_{vinho['id']}",
-                            )
-                            novo_encontro_id = int(
-                                todos_encontros.loc[
-                                    todos_encontros["label"] == novo_encontro_label, "id"
-                                ].iloc[0]
-                            )
+                                    novo_encontro_id = int(
+                                        todos_encontros.loc[
+                                            todos_encontros["label"] == novo_encontro_label, "id"
+                                        ].iloc[0]
+                                    )
 
-                            col_salvar, col_excluir = st.columns(2)
-                            salvar = col_salvar.form_submit_button("Salvar alterações")
-                            excluir = col_excluir.form_submit_button("🗑️ Excluir vinho")
+                                    col_salvar, col_excluir = st.columns(2)
+                                    salvar = col_salvar.form_submit_button("Salvar alterações")
+                                    excluir = col_excluir.form_submit_button("🗑️ Excluir vinho")
 
-                        if salvar:
-                            execute(
-                                """
-                                UPDATE vinhos
-                                SET encontro_id = ?, nome = ?, uva = ?, pais = ?, regiao = ?, safra = ?, tipo = ?
-                                WHERE id = ?
-                                """,
-                                (
-                                    novo_encontro_id,
-                                    nome_edit,
-                                    uva_edit,
-                                    pais_edit,
-                                    regiao_edit,
-                                    safra_edit,
-                                    tipo_edit,
-                                    int(vinho["id"]),
-                                ),
-                            )
-                            st.success("Vinho atualizado com sucesso.")
-                            st.rerun()
+                                if salvar:
+                                    execute(
+                                        """
+                                        UPDATE vinhos
+                                        SET encontro_id = ?, nome = ?, uva = ?, pais = ?, regiao = ?, safra = ?, tipo = ?
+                                        WHERE id = ?
+                                        """,
+                                        (
+                                            novo_encontro_id,
+                                            nome_edit,
+                                            uva_edit,
+                                            pais_edit,
+                                            regiao_edit,
+                                            safra_edit,
+                                            tipo_edit,
+                                            int(vinho["id"]),
+                                        ),
+                                    )
+                                    st.success("Vinho atualizado com sucesso.")
+                                    st.rerun()
 
-                        if excluir:
-                            execute("DELETE FROM avaliacoes WHERE vinho_id = ?", (int(vinho["id"]),))
-                            execute("DELETE FROM vinhos WHERE id = ?", (int(vinho["id"]),))
-                            st.success("Vinho excluído com sucesso.")
-                            st.rerun()
+                                if excluir:
+                                    execute("DELETE FROM avaliacoes WHERE vinho_id = ?", (int(vinho["id"]),))
+                                    execute("DELETE FROM vinhos WHERE id = ?", (int(vinho["id"]),))
+                                    st.success("Vinho excluído com sucesso.")
+                                    st.rerun()
 
 # -----------------------------
 # Novo encontro
@@ -642,7 +558,7 @@ elif menu == "Novo encontro":
     with st.form("form_encontro"):
         data_encontro = st.date_input("Data", value=date.today())
         titulo = st.text_input("Título do encontro", value=titulo_sugerido)
-        tema = st.text_input("Tema", placeholder="Ex.: Noite Italiana, Vinhos Portugueses, Harmonização com Massas")
+        tema = st.text_input("Tema / subtítulo", placeholder="Ex.: Noite Italiana, Vinhos Portugueses, Harmonização com Massas")
         anfitrioes = st.text_input("Anfitriões", placeholder="Ex.: Alê & Ale")
         local = st.text_input("Local")
         observacoes = st.text_area("Observações")
@@ -875,7 +791,7 @@ elif menu == "Catálogo":
                 with col_info:
                     st.markdown(f"### {row['nome']}")
                     st.write(f"**Encontro:** {row['data']} - {row['encontro']}")
-                    if "tema_encontro" in row and pd.notna(row["tema_encontro"]) and str(row["tema_encontro"]).strip():
+                    if "tema_encontro" in row and row["tema_encontro"]:
                         st.write(f"**Tema:** {row['tema_encontro']}")
                     st.write(f"**Uva:** {row['uva']} | **País/Região:** {row['pais']} / {row['regiao']}")
                     st.write(f"**Safra:** {row['safra']} | **Produtor:** {row['produtor']}")
