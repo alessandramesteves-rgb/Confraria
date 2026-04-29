@@ -290,6 +290,9 @@ st.markdown(
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
 
+if "admin" not in st.session_state:
+    st.session_state.admin = False
+
 if not st.session_state.usuario:
     st.markdown(
         """
@@ -302,23 +305,25 @@ if not st.session_state.usuario:
     )
 
     nome = st.text_input("Seu nome")
+    senha_admin = st.text_input("Senha de admin (somente para administração)", type="password")
 
     if st.button("Entrar"):
         if nome.strip():
             st.session_state.usuario = nome.strip()
+            st.session_state.admin = nome.strip() == "Alessandra" and senha_admin == "balacobaco"
             st.rerun()
         else:
             st.warning("Informe seu nome.")
 
     st.stop()
 
-ADMIN_NOMES = ["Alessandra"]
-usuario_admin = st.session_state.usuario in ADMIN_NOMES
+usuario_admin = st.session_state.get("admin", False)
 
 st.sidebar.write(f"👤 {st.session_state.usuario}")
 
 if st.sidebar.button("Sair"):
     st.session_state.usuario = None
+    st.session_state.admin = False
     st.rerun()
 
 opcoes_menu = [
@@ -516,6 +521,11 @@ if menu == "Dashboard":
                                         ].iloc[0]
                                     )
 
+                                    confirmar_exclusao = st.checkbox(
+                                        "Confirmar exclusão deste vinho",
+                                        key=f"confirmar_exclusao_vinho_{vinho['id']}",
+                                    )
+
                                     col_salvar, col_excluir = st.columns(2)
                                     salvar = col_salvar.form_submit_button("Salvar alterações")
                                     excluir = col_excluir.form_submit_button("🗑️ Excluir vinho")
@@ -542,10 +552,13 @@ if menu == "Dashboard":
                                     st.rerun()
 
                                 if excluir:
-                                    execute("DELETE FROM avaliacoes WHERE vinho_id = ?", (int(vinho["id"]),))
-                                    execute("DELETE FROM vinhos WHERE id = ?", (int(vinho["id"]),))
-                                    st.success("Vinho excluído com sucesso.")
-                                    st.rerun()
+                                    if confirmar_exclusao:
+                                        execute("DELETE FROM avaliacoes WHERE vinho_id = ?", (int(vinho["id"]),))
+                                        execute("DELETE FROM vinhos WHERE id = ?", (int(vinho["id"]),))
+                                        st.success("Vinho excluído com sucesso.")
+                                        st.rerun()
+                                    else:
+                                        st.warning("Marque a confirmação antes de excluir o vinho.")
 
 # -----------------------------
 # Novo encontro
@@ -963,7 +976,7 @@ elif menu == "Backup & Dados":
     st.markdown("---")
     st.markdown("### ⚠️ Administração")
 
-    confirmar = st.checkbox("Confirmar limpeza da base")
+    confirmar = st.checkbox("Confirmo que desejo limpar toda a base de dados")
 
     if confirmar and st.button("🧹 Limpar base de dados"):
         execute("DELETE FROM avaliacoes")
