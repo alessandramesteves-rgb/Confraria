@@ -983,3 +983,98 @@ elif menu == "Backup & Dados":
         execute("DELETE FROM vinhos")
         execute("DELETE FROM encontros")
         st.success("Base limpa com sucesso.")
+
+
+    st.markdown("---")
+    st.markdown("### 🔄 Restaurar backup completo")
+
+    uploaded = st.file_uploader("Selecione o arquivo backup_balacobaco.csv", type=["csv"], key="upload_backup")
+
+    if uploaded is not None:
+        try:
+            df = pd.read_csv(uploaded)
+
+            if "tipo_backup" not in df.columns:
+                st.error("Arquivo inválido. Não contém coluna tipo_backup.")
+            else:
+                if st.button("Restaurar agora"):
+                    # Limpa base
+                    execute("DELETE FROM avaliacoes")
+                    execute("DELETE FROM vinhos")
+                    execute("DELETE FROM encontros")
+
+                    # Encontros
+                    encontros_df = df[df["tipo_backup"] == "encontros"].drop(columns=["tipo_backup"], errors="ignore")
+                    if not encontros_df.empty:
+                        for _, r in encontros_df.iterrows():
+                            execute(
+                                """
+                                INSERT INTO encontros (id, data, titulo, tema, anfitrioes, local, observacoes)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (
+                                    int(r.get("id")),
+                                    r.get("data"),
+                                    r.get("titulo"),
+                                    r.get("tema"),
+                                    r.get("anfitrioes"),
+                                    r.get("local"),
+                                    r.get("observacoes"),
+                                ),
+                            )
+
+                    # Vinhos
+                    vinhos_df = df[df["tipo_backup"] == "vinhos"].drop(columns=["tipo_backup"], errors="ignore")
+                    if not vinhos_df.empty:
+                        for _, r in vinhos_df.iterrows():
+                            execute(
+                                """
+                                INSERT INTO vinhos (id, encontro_id, nome, uva, pais, regiao, safra, produtor,
+                                tipo, classificacao, teor_alcoolico, temperatura_servico, harmonizacao,
+                                visual, aroma, paladar, foto_rotulo)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (
+                                    int(r.get("id")),
+                                    int(r.get("encontro_id")),
+                                    r.get("nome"),
+                                    r.get("uva"),
+                                    r.get("pais"),
+                                    r.get("regiao"),
+                                    r.get("safra"),
+                                    r.get("produtor"),
+                                    r.get("tipo"),
+                                    r.get("classificacao"),
+                                    r.get("teor_alcoolico"),
+                                    r.get("temperatura_servico"),
+                                    r.get("harmonizacao"),
+                                    r.get("visual"),
+                                    r.get("aroma"),
+                                    r.get("paladar"),
+                                    r.get("foto_rotulo"),
+                                ),
+                            )
+
+                    # Avaliações
+                    aval_df = df[df["tipo_backup"] == "avaliacoes"].drop(columns=["tipo_backup"], errors="ignore")
+                    if not aval_df.empty:
+                        for _, r in aval_df.iterrows():
+                            execute(
+                                """
+                                INSERT INTO avaliacoes (id, vinho_id, confrade, nota, repetiria, foi_balacobaco, comentario)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (
+                                    int(r.get("id")),
+                                    int(r.get("vinho_id")),
+                                    r.get("confrade"),
+                                    float(r.get("nota")) if pd.notna(r.get("nota")) else None,
+                                    r.get("repetiria"),
+                                    r.get("foi_balacobaco"),
+                                    r.get("comentario"),
+                                ),
+                            )
+
+                    st.success("Backup restaurado com sucesso.")
+        except Exception as e:
+            st.error(f"Erro ao restaurar: {e}")
